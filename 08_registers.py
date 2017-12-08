@@ -44,8 +44,6 @@ class Registers(object):
         if check_operation == "<=":
             return check_lhs_value <= check_rhs
         raise ValueError("Invalid operation {}".format(check_operation))
-        print(check_lhs, check_operation, check_rhs)
-        assert(False)
 
     def adjust_register(self, target, target_operation, target_change):
         if target not in self.registers:
