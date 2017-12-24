@@ -14,12 +14,25 @@ class BreadthFirstSolver(object):
         # Set of tuples of (previous_moves_tuple, game_state)
         move_states = {((), game.initial_state)}
         num_moves = 0
+        best_state = game.initial_state
+        best_score = game.score(best_state)
         while True:
             self.show_progress(num_moves, len(move_states))
             # Check for solutions
             solutions = {m for m, s in move_states if game.is_end_state(s)}
             if solutions:
                 return solutions
+
+            # Check if we've found a better state:
+            for _, s in move_states:
+                if game.score(s) > best_score:
+                    best_state = s
+                    best_score = game.score(s)
+                    print('High Score: ', best_score)
+                
+                # Hacked in to solve puzzle
+                if num_moves == 40:
+                    print ("Move 40: ", game.score(s)) 
 
             # Find the next level of states
             move_states = {

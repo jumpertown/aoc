@@ -34,6 +34,11 @@ class Game(object):
 
     def is_end_state(self, state):
         """Is the current state `state` an end state of the game."""
+        raise NotImplementedError()
+
+    def score(self, state):
+        """The score of the current `state`."""
+        return 0
 
 
 __all__ = (
