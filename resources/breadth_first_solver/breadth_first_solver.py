@@ -8,7 +8,7 @@ class BreadthFirstSolver(object):
             "s" if num_states == 1 else ""
         ))
 
-    def solve(self, game):
+    def solve(self, game, max_moves=0):
         """Solve the game returning a set of shortest solutions."""
         observed_states = set()
         # Set of tuples of (previous_moves_tuple, game_state)
@@ -17,7 +17,10 @@ class BreadthFirstSolver(object):
         best_state = game.initial_state
         best_score = game.score(best_state)
         while True:
-            self.show_progress(num_moves, len(move_states))
+            # self.show_progress(num_moves, len(move_states))
+            if num_moves > max_moves:
+                raise BufferError
+
             # Check for solutions
             solutions = {m for m, s in move_states if game.is_end_state(s)}
             if solutions:
