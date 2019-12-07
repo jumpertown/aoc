@@ -1,29 +1,31 @@
 package intcode
 
-fun operate(inputCodes: List<Int>, inputs: List<Int>): Int {
+import java.math.BigDecimal
+
+fun operate(inputCodes: List<Int>, inputs: List<BigDecimal>): BigDecimal {
     var position = 0
     var inputNum = 0
 
-    var overriddenCodes = mutableMapOf<Int, Int>()
+    var overriddenCodes = mutableMapOf<Int, BigDecimal>()
 
-    fun read(index: Int): Int {
+    fun read(index: Int): BigDecimal {
         return if(overriddenCodes.containsKey(index)) {
             overriddenCodes[index]!!
         } else {
-            inputCodes[index]
+            BigDecimal(inputCodes[index])
         }
     }
 
-    fun write(index: Int, value: Int) {
+    fun write(index: Int, value: BigDecimal) {
         overriddenCodes[index] = value
     }
 
-    fun run(): Int {
-        val tests = mutableListOf<Int>()
+    fun run(): BigDecimal {
+        val tests = mutableListOf<BigDecimal>()
         while(true) {
             var opCode =  read(position)
             //println(opCode)
-            var operator = Operator.create(opCode, ::read, ::write)
+            var operator = Operator.create(opCode.toInt(), ::read, ::write)
 
             if(operator.isTerminated)
                 break
@@ -35,7 +37,7 @@ fun operate(inputCodes: List<Int>, inputs: List<Int>): Int {
             if(operator.requiresInput) {
                 var input =
                     if(inputNum >= inputs.size) {
-                        println("Is this right inputNum: $inputNum...")
+                        //println("Is this right inputNum: $inputNum...")
                         inputs.last()
                     } else {
                         inputs[inputNum]
@@ -49,7 +51,7 @@ fun operate(inputCodes: List<Int>, inputs: List<Int>): Int {
 
             if(ret != null) {
                 if (operator.isJump) {
-                    position = ret
+                    position = ret.toInt()
                     continue
                 }
                 tests.add(ret)

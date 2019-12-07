@@ -1,5 +1,7 @@
 package intcode
 
+import java.math.BigDecimal
+
 interface Operator {
     val opCode: Int
     val numOperands: Int
@@ -7,10 +9,10 @@ interface Operator {
     val isJump: Boolean
     val requiresInput: Boolean
 
-    val reader: (index: Int) -> Int
-    val writer: (index: Int, value: Int) -> Unit
+    val reader: (index: Int) -> BigDecimal
+    val writer: (index: Int, value: BigDecimal) -> Unit
 
-    fun operate(operands: List<Int>): Int?
+    fun operate(operands: List<BigDecimal>): BigDecimal?
 
     fun isLocation(opNum: Int): Boolean {
         fun getDecimalPlace(from: Int, place: Int): Int {
@@ -29,17 +31,17 @@ interface Operator {
         return getDecimalPlace(this.opCode, opNum + 2) == 0
     }
 
-    fun getValue(operand: Int, operandPos:Int) =
+    fun getValue(operand: BigDecimal, operandPos:Int): BigDecimal =
         if(isLocation(operandPos))
-            this.reader(operand)
+            this.reader(operand.toInt())
         else
             operand
 
     companion object {
         fun create(
             opCode: Int,
-            reader: (index: Int) -> Int,
-            writer: (index: Int, value: Int) -> Unit
+            reader: (index: Int) -> BigDecimal,
+            writer: (index: Int, value: BigDecimal) -> Unit
         ): Operator {
             return when(opCode % 100) {
                 1 -> AddOperator(opCode, reader, writer)
@@ -59,105 +61,104 @@ interface Operator {
 
 data class NoOpOperator(
     override val opCode: Int,
-    override val reader: (index: Int) -> Int,
-    override val writer: (index: Int, value:Int) -> Unit
+    override val reader: (index: Int) -> BigDecimal,
+    override val writer: (index: Int, value:BigDecimal) -> Unit
 ) : Operator {
     override val numOperands = 0
     override val isTerminated = false
     override val isJump = false
     override val requiresInput = false
-    override fun operate(operands: List<Int>): Int? = null
+    override fun operate(operands: List<BigDecimal>): BigDecimal? = null
 }
 
 data class TerminationOperator(
     override val opCode: Int,
-    override val reader: (index: Int) -> Int,
-    override val writer: (index: Int, value:Int) -> Unit
+    override val reader: (index: Int) -> BigDecimal,
+    override val writer: (index: Int, value:BigDecimal) -> Unit
 ) : Operator {
     override val numOperands = 0
     override val isTerminated = true
     override val isJump = false
     override val requiresInput = false
-    override fun operate(operands: List<Int>): Int? = null
+    override fun operate(operands: List<BigDecimal>): BigDecimal? = null
 }
 
 data class AddOperator(
     override val opCode: Int,
-    override val reader: (index: Int) -> Int,
-    override val writer: (index: Int, value:Int) -> Unit
+    override val reader: (index: Int) -> BigDecimal,
+    override val writer: (index: Int, value:BigDecimal) -> Unit
 ) : Operator {
     override val numOperands = 3
     override val isTerminated = false
     override val isJump = false
     override val requiresInput = false
 
-    override fun operate(operands: List<Int>): Int? {
+    override fun operate(operands: List<BigDecimal>): BigDecimal? {
         val output = this.getValue(operands[0], 1) + this.getValue(operands[1], 2)
-        //this.writer(this.getValue(operands[2], 3), output)
-        this.writer(operands[2], output)
+        this.writer(operands[2].toInt(), output)
         return null
     }
 }
 
 data class MultiplyOperator(
     override val opCode: Int,
-    override val reader: (index: Int) -> Int,
-    override val writer: (index: Int, value:Int) -> Unit
+    override val reader: (index: Int) -> BigDecimal,
+    override val writer: (index: Int, value: BigDecimal) -> Unit
 ) : Operator {
     override val numOperands = 3
     override val isTerminated = false
     override val isJump = false
     override val requiresInput = false
 
-    override fun operate(operands: List<Int>): Int? {
+    override fun operate(operands: List<BigDecimal>): BigDecimal? {
         val output = this.getValue(operands[0], 1) * this.getValue(operands[1], 2)
-        this.writer(operands[2], output)
+        this.writer(operands[2].toInt(), output)
         return null
     }
 }
 
 data class InputOperator(
     override val opCode: Int,
-    override val reader: (index: Int) -> Int,
-    override val writer: (index: Int, value:Int) -> Unit
+    override val reader: (index: Int) -> BigDecimal,
+    override val writer: (index: Int, value:BigDecimal) -> Unit
 ) : Operator {
     override val numOperands = 1
     override val isTerminated = false
     override val isJump = false
     override val requiresInput = true
 
-    override fun operate(operands: List<Int>): Int? {
-        this.writer(operands[0], operands[1])
+    override fun operate(operands: List<BigDecimal>): BigDecimal? {
+        this.writer(operands[0].toInt(), operands[1])
         return null
     }
 }
 
 data class OutputOperator(
     override val opCode: Int,
-    override val reader: (index: Int) -> Int,
-    override val writer: (index: Int, value:Int) -> Unit
+    override val reader: (index: Int) -> BigDecimal,
+    override val writer: (index: Int, value:BigDecimal) -> Unit
 ) : Operator {
     override val numOperands = 1
     override val isTerminated = false
     override val isJump = false
     override val requiresInput = false
 
-    override fun operate(operands: List<Int>): Int? =
+    override fun operate(operands: List<BigDecimal>): BigDecimal? =
         this.getValue(operands[0], 1)
 }
 
 data class JumpIfTrueOperator(
     override val opCode: Int,
-    override val reader: (index: Int) -> Int,
-    override val writer: (index: Int, value:Int) -> Unit
+    override val reader: (index: Int) -> BigDecimal,
+    override val writer: (index: Int, value:BigDecimal) -> Unit
 ) : Operator {
     override val numOperands = 2
     override val isTerminated = false
     override val isJump = true
     override val requiresInput = false
 
-    override fun operate(operands: List<Int>): Int? =
-        if(this.getValue(operands[0], 1) != 0)
+    override fun operate(operands: List<BigDecimal>): BigDecimal? =
+        if(this.getValue(operands[0], 1) != BigDecimal(0))
             this.getValue(operands[1], 2)
         else
             null
@@ -165,16 +166,16 @@ data class JumpIfTrueOperator(
 
 data class JumpIfFalseOperator(
     override val opCode: Int,
-    override val reader: (index: Int) -> Int,
-    override val writer: (index: Int, value:Int) -> Unit
+    override val reader: (index: Int) -> BigDecimal,
+    override val writer: (index: Int, value:BigDecimal) -> Unit
 ) : Operator {
     override val numOperands = 2
     override val isTerminated = false
     override val isJump = true
     override val requiresInput = false
 
-    override fun operate(operands: List<Int>): Int? =
-        if(this.getValue(operands[0], 1) == 0)
+    override fun operate(operands: List<BigDecimal>): BigDecimal? =
+        if(this.getValue(operands[0], 1) == BigDecimal(0))
             this.getValue(operands[1], 2)
         else
             null
@@ -182,19 +183,19 @@ data class JumpIfFalseOperator(
 
 data class LessThanOperator(
     override val opCode: Int,
-    override val reader: (index: Int) -> Int,
-    override val writer: (index: Int, value:Int) -> Unit
+    override val reader: (index: Int) -> BigDecimal,
+    override val writer: (index: Int, value:BigDecimal) -> Unit
 ) : Operator {
     override val numOperands = 3
     override val isTerminated = false
     override val isJump = false
     override val requiresInput = false
 
-    override fun operate(operands: List<Int>): Int? {
+    override fun operate(operands: List<BigDecimal>): BigDecimal? {
         if(this.getValue(operands[0], 1) < this.getValue(operands[1], 2))
-            this.writer(operands[2], 1)
+            this.writer(operands[2].toInt(), BigDecimal(1))
         else
-            this.writer(operands[2], 0)
+            this.writer(operands[2].toInt(), BigDecimal(0))
 
         return null
     }
@@ -202,19 +203,19 @@ data class LessThanOperator(
 
 data class EqualsOperator(
     override val opCode: Int,
-    override val reader: (index: Int) -> Int,
-    override val writer: (index: Int, value:Int) -> Unit
+    override val reader: (index: Int) -> BigDecimal,
+    override val writer: (index: Int, value:BigDecimal) -> Unit
 ) : Operator {
     override val numOperands = 3
     override val isTerminated = false
     override val isJump = false
     override val requiresInput = false
 
-    override fun operate(operands: List<Int>): Int? {
+    override fun operate(operands: List<BigDecimal>): BigDecimal? {
         if(this.getValue(operands[0], 1) == this.getValue(operands[1], 2))
-            this.writer(operands[2], 1)
+            this.writer(operands[2].toInt(), BigDecimal(1))
         else
-            this.writer(operands[2], 0)
+            this.writer(operands[2].toInt(), BigDecimal(0))
 
         return null
     }
