@@ -128,6 +128,7 @@ data class InputOperator(
     override val requiresInput = true
 
     override fun operate(operands: List<BigDecimal>): BigDecimal? {
+        //println("Input Operator")
         this.writer(operands[0].toInt(), operands[1])
         return null
     }
@@ -143,8 +144,10 @@ data class OutputOperator(
     override val isJump = false
     override val requiresInput = false
 
-    override fun operate(operands: List<BigDecimal>): BigDecimal? =
-        this.getValue(operands[0], 1)
+    override fun operate(operands: List<BigDecimal>): BigDecimal? {
+        //println("Output Operator")
+        return this.getValue(operands[0], 1)
+    }
 }
 
 data class JumpIfTrueOperator(

@@ -1,68 +1,79 @@
 package intcode
 
 import java.math.BigDecimal
+import java.util.*
 
-fun operate(inputCodes: List<Int>, inputs: List<BigDecimal>): BigDecimal {
+class Computer(val inputCodes: List<Int>, val phase: Int) {
+    var isPhaseSet = false
+    var isTerminated = false
     var position = 0
-    var inputNum = 0
 
-    var overriddenCodes = mutableMapOf<Int, BigDecimal>()
+    fun operate(inputs: List<BigDecimal>): List<BigDecimal> {
+        var overriddenCodes = mutableMapOf<Int, BigDecimal>()
+        val inputQueue = ArrayDeque<BigDecimal>(inputs)
 
-    fun read(index: Int): BigDecimal {
-        return if(overriddenCodes.containsKey(index)) {
-            overriddenCodes[index]!!
-        } else {
-            BigDecimal(inputCodes[index])
+        fun read(index: Int): BigDecimal {
+            return if (overriddenCodes.containsKey(index)) {
+                overriddenCodes[index]!!
+            } else {
+                BigDecimal(inputCodes[index])
+            }
         }
-    }
 
-    fun write(index: Int, value: BigDecimal) {
-        overriddenCodes[index] = value
-    }
+        fun write(index: Int, value: BigDecimal) {
+            overriddenCodes[index] = value
+        }
 
-    fun run(): BigDecimal {
-        val tests = mutableListOf<BigDecimal>()
-        while(true) {
-            var opCode =  read(position)
-            //println(opCode)
-            var operator = Operator.create(opCode.toInt(), ::read, ::write)
+        fun run(): List<BigDecimal> {
+            val outputs = mutableListOf<BigDecimal>()
 
-            if(operator.isTerminated)
-                break
+            while (true) {
+                var opCode = read(position)
+                //println(opCode)
+                var operator = Operator.create(opCode.toInt(), ::read, ::write)
 
-            var numOperands = operator.numOperands
+                if (operator.isTerminated) {
+                    //println("TERMINATING...")
+                    this.isTerminated = true
+                    break
+                }
 
-            var operands = ((position + 1)..(position + numOperands)).map { read(it) }
+                var numOperands = operator.numOperands
 
-            if(operator.requiresInput) {
-                var input =
-                    if(inputNum >= inputs.size) {
-                        //println("Is this right inputNum: $inputNum...")
-                        inputs.last()
-                    } else {
-                        inputs[inputNum]
+                var operands = ((position + 1)..(position + numOperands)).map { read(it) }
+
+                if (operator.requiresInput) {
+                    //println("Input position: $position")
+                    if (isPhaseSet && inputQueue.isEmpty()) {
+                        // Need more inputs
+                        break
                     }
 
-                operands += listOf(input)
-                inputNum += 1
-            }
+                    var input = if (isPhaseSet) inputQueue.remove() else BigDecimal(phase)
+                    if (!isPhaseSet)
+                        isPhaseSet = true
 
-            val ret = operator.operate(operands)
-
-            if(ret != null) {
-                if (operator.isJump) {
-                    position = ret.toInt()
-                    continue
+                    //println("Input arg: $input")
+                    operands += listOf(input)
                 }
-                tests.add(ret)
+
+                val ret = operator.operate(operands)
+
+                if (ret != null) {
+                    if (operator.isJump) {
+                        position = ret.toInt()
+                        continue
+                    }
+                    outputs.add(ret)
+                }
+
+                position += (numOperands + 1)
             }
 
-            position += (numOperands + 1)
+            return outputs.toList()
         }
 
-        return tests.last()
+        return run()
     }
-
-    return run()
 }
 
