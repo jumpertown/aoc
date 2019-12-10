@@ -43,16 +43,28 @@ interface Operator {
         }
 
         // The first opNum is described at the third decimal place
-        return getDecimalPlace(this.opCode, opNum + 2)
+        return getDecimalPlace(this.opCode, opNum + 3)
     }
 
-    fun getValue(operand: BigDecimal, operandPos:Int, relativeBase:Int=0): BigDecimal =
-        when(getMode(operandPos)) {
+    fun getValue(operands: List<BigDecimal>, operandPos:Int): BigDecimal {
+        val operand = operands[operandPos]
+        return when (val mode = getMode(operandPos)) {
             LOCATION_MODE -> this.reader(operand.toInt())
             POSITION_MODE -> operand
             RELATIVE_MODE -> this.reader(operand.toInt() + RelativeBase.value)
-            else -> throw IllegalStateException("Unknown mode: ${getMode(operandPos)}")
+            else -> throw IllegalStateException("Unknown mode: $mode")
         }
+    }
+
+    fun writeValue(operands: List<BigDecimal>, operandPos:Int, output: BigDecimal) {
+        val operand = operands[operandPos]
+        val target = when (val mode = getMode(operandPos)) {
+            LOCATION_MODE -> operand.toInt()
+            RELATIVE_MODE -> operand.toInt() + RelativeBase.value
+            else -> throw IllegalStateException("Unknown mode: $mode")
+        }
+        this.writer(target, output)
+    }
 
     companion object {
         fun create(
@@ -75,18 +87,6 @@ interface Operator {
             }
         }
     }
-}
-
-data class NoOpOperator(
-    override val opCode: Int,
-    override val reader: (index: Int) -> BigDecimal,
-    override val writer: (index: Int, value:BigDecimal) -> Unit
-) : Operator {
-    override val numOperands = 0
-    override val isTerminated = false
-    override val isJump = false
-    override val requiresInput = false
-    override fun operate(operands: List<BigDecimal>): BigDecimal? = null
 }
 
 data class TerminationOperator(
@@ -112,8 +112,8 @@ data class AddOperator(
     override val requiresInput = false
 
     override fun operate(operands: List<BigDecimal>): BigDecimal? {
-        val output = this.getValue(operands[0], 1) + this.getValue(operands[1], 2)
-        this.writer(operands[2].toInt(), output)
+        val output = this.getValue(operands, 0) + this.getValue(operands, 1)
+        writeValue(operands, 2, output)
         return null
     }
 }
@@ -129,8 +129,8 @@ data class MultiplyOperator(
     override val requiresInput = false
 
     override fun operate(operands: List<BigDecimal>): BigDecimal? {
-        val output = this.getValue(operands[0], 1) * this.getValue(operands[1], 2)
-        this.writer(operands[2].toInt(), output)
+        val output = this.getValue(operands, 0) * this.getValue(operands, 1)
+        writeValue(operands, 2, output)
         return null
     }
 }
@@ -146,9 +146,9 @@ data class InputOperator(
     override val requiresInput = true
 
     override fun operate(operands: List<BigDecimal>): BigDecimal? {
-        println("Input Operator: $operands")
-        this.writer(operands[0].toInt(), this.getValue(operands[1], 2))
-        //this.writer(operands[0].toInt(), operands[1])
+        //println("Input Operator: $operands writing to ${this.getValue(operands, 0)}")
+        //println("Mode ${getMode(0)}")
+        writeValue(operands, 0, operands[1])
         return null
     }
 }
@@ -165,7 +165,7 @@ data class OutputOperator(
 
     override fun operate(operands: List<BigDecimal>): BigDecimal? {
         //println("Output Operator")
-        return this.getValue(operands[0], 1)
+        return this.getValue(operands, 0)
     }
 }
 
@@ -180,8 +180,8 @@ data class JumpIfTrueOperator(
     override val requiresInput = false
 
     override fun operate(operands: List<BigDecimal>): BigDecimal? =
-        if(this.getValue(operands[0], 1) != BigDecimal(0))
-            this.getValue(operands[1], 2)
+        if(this.getValue(operands, 0) != BigDecimal(0))
+            this.getValue(operands, 1)
         else
             null
 }
@@ -197,8 +197,8 @@ data class JumpIfFalseOperator(
     override val requiresInput = false
 
     override fun operate(operands: List<BigDecimal>): BigDecimal? =
-        if(this.getValue(operands[0], 1) == BigDecimal(0))
-            this.getValue(operands[1], 2)
+        if(this.getValue(operands, 0) == BigDecimal(0))
+            this.getValue(operands, 1)
         else
             null
 }
@@ -214,10 +214,10 @@ data class LessThanOperator(
     override val requiresInput = false
 
     override fun operate(operands: List<BigDecimal>): BigDecimal? {
-        if(this.getValue(operands[0], 1) < this.getValue(operands[1], 2))
-            this.writer(operands[2].toInt(), BigDecimal(1))
+        if(this.getValue(operands, 0) < this.getValue(operands, 1))
+            writeValue(operands, 2, BigDecimal(1))
         else
-            this.writer(operands[2].toInt(), BigDecimal(0))
+            writeValue(operands, 2, BigDecimal(0))
 
         return null
     }
@@ -234,10 +234,10 @@ data class EqualsOperator(
     override val requiresInput = false
 
     override fun operate(operands: List<BigDecimal>): BigDecimal? {
-        if(this.getValue(operands[0], 1) == this.getValue(operands[1], 2))
-            this.writer(operands[2].toInt(), BigDecimal(1))
+        if(this.getValue(operands, 0) == this.getValue(operands, 1))
+            writeValue(operands, 2, BigDecimal(1))
         else
-            this.writer(operands[2].toInt(), BigDecimal(0))
+            writeValue(operands, 2, BigDecimal(0))
 
         return null
     }
@@ -254,8 +254,8 @@ data class AdjustRelativeBaseOperator(
     override val requiresInput = false
 
     override fun operate(operands: List<BigDecimal>): BigDecimal? {
-        RelativeBase.value += this.getValue(operands[0], 1).toInt()
-        println("Relative base: ${RelativeBase.value}")
+        RelativeBase.value += this.getValue(operands, 0).toInt()
+        //println("Relative base: ${RelativeBase.value}, $operands ${this.getValue(operands, 0)} $opCode")
         //RelativeBase.value += operands[0].toInt()
         return null
     }

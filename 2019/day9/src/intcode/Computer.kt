@@ -16,16 +16,19 @@ class Computer(val inputCodes: List<BigDecimal>, val phase: Int) {
         val inputQueue = ArrayDeque<BigDecimal>(inputs)
 
         fun read(index: Int): BigDecimal {
-            return if (overriddenCodes.containsKey(index)) {
+            val ret = if (overriddenCodes.containsKey(index)) {
                 overriddenCodes[index]!!
             } else if(index < 0 || index >= inputCodes.size) {
                 BigDecimal(0)
             } else {
                 inputCodes[index]
             }
+            //println("Reading index $index ($ret)")
+            return ret
         }
 
         fun write(index: Int, value: BigDecimal) {
+            //println("Writing $value to $index")
             overriddenCodes[index] = value
         }
 
@@ -34,7 +37,7 @@ class Computer(val inputCodes: List<BigDecimal>, val phase: Int) {
 
             while (true) {
                 var opCode = read(position)
-                //println(opCode)
+                //println("Pos: $position OpCode: $opCode 0: ${read(0)}, 63: ${read(63)}")
                 var operator = Operator.create(opCode.toInt(), ::read, ::write)
 
                 if (operator.isTerminated) {
@@ -48,7 +51,7 @@ class Computer(val inputCodes: List<BigDecimal>, val phase: Int) {
                 var operands = ((position + 1)..(position + numOperands)).map { read(it) }
 
                 if (operator.requiresInput) {
-                    println("Input opCode: $opCode position: $position isPhase: $isPhaseSet inputQueue: $inputQueue, phase: $phase")
+                    //println("Input opCode: $opCode position: $position isPhase: $isPhaseSet inputQueue: $inputQueue, phase: $phase")
                     if (isPhaseSet && inputQueue.isEmpty()) {
                         // Need more inputs
                         break
@@ -66,6 +69,7 @@ class Computer(val inputCodes: List<BigDecimal>, val phase: Int) {
 
                 if (ret != null) {
                     if (operator.isJump) {
+                        //println("Jumping to $ret")
                         position = ret.toInt()
                         continue
                     }

@@ -4,12 +4,21 @@ import java.io.File
 import java.math.BigDecimal
 
 fun main() {
-    println(part1())
+    println(part2())
 }
 
 fun part1 (): List<BigDecimal> {
     val comp = Computer(parsePuzzleInput(), 1)
-    return comp.operate(listOf<BigDecimal>())
+    val ret = comp.operate(listOf<BigDecimal>())
+    println("Terminated: ${comp.isTerminated}")
+    return ret
+}
+
+fun part2 (): List<BigDecimal> {
+    val comp = Computer(parsePuzzleInput(), 2)
+    val ret = comp.operate(listOf<BigDecimal>())
+    println("Terminated: ${comp.isTerminated}")
+    return ret
 }
 
 fun test1 (): List<BigDecimal> {
