@@ -51,7 +51,7 @@ fun part2(asteroids: List<Asteroid>): List<Asteroid> {
     }
 
     val clockwiseDirections = othersByDirection.keys.sortedBy { it.angle() }
-    
+
     val destroyedAsteroids = mutableListOf<Asteroid>()
 
     while(destroyedAsteroids.size < others.size) {
