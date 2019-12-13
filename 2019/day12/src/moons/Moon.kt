@@ -11,12 +11,26 @@ data class Vector(val x: Int=0, val y: Int=0, val z: Int=0) {
         )
     }
 
+    operator fun get(idx: Int): Int =
+        when(idx) {
+            0 -> x
+            1 -> y
+            2 -> z
+            else -> throw IndexOutOfBoundsException()
+        }
+
+    operator fun times(factor: Int): Vector {
+        return Vector(
+            this.x * factor,
+            this.y * factor,
+            this.z * factor
+        )
+    }
+
     override fun toString(): String = "<$x, $y, $z>"
 }
 
-class Moon (val name: String, var position: Vector) {
-    var velocity = Vector()
-
+data class Moon (val name: String, val position: Vector, val velocity:Vector=Vector()) {
     val potentialEnergy: Int
         get() = position.x.absoluteValue + position.y.absoluteValue + position.z.absoluteValue
 
@@ -26,15 +40,18 @@ class Moon (val name: String, var position: Vector) {
     val energy: Int
         get() = this.potentialEnergy * this.kineticEnergy
 
-    fun applyGravity(others: List<Moon>) {
-        val effects = others.filter {it.name != this.name}.map { compareVectors(it.position, this.position) }
+    fun boosts(moons: List<Moon>): List<Vector> =
+        moons.filter {it.name != this.name}.map { compareVectors(it.position, this.position) }
 
-        for (effect in effects)
-            velocity += effect
-    }
+    fun applyGravity(moons: List<Moon>, steps:Int=1): Moon {
+        var boost = Vector()
+        for (effect in boosts(moons))
+            boost += effect
 
-    fun move() {
-        position += velocity
+        val newVelocity = this.velocity + boost * steps
+        val newPosition = this.position + this.velocity * steps + boost * (steps * (steps + 1) / 2)
+
+        return Moon(name, newPosition, newVelocity)
     }
 
     override fun toString(): String = "<Moon: $name, $position, $velocity>"

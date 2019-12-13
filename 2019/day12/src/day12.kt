@@ -8,43 +8,61 @@ import java.math.BigInteger
  * state to be repeated would be the initial state. Can we apply multiple steps at a time
  * between crossings
  */
-fun part2(moons: List<Moon>) {
-    var steps = BigDecimal(0)
-    val initialPositions = moons.map{it.position}
-    val initialVelocities = moons.map{it.velocity}
 
-    while(true) {
+fun periodicity(axis: Int, initialMoons: List<Moon>): BigDecimal {
+    val initialPositions = initialMoons.map { it.position[axis] }
+    val initialVelocities = initialMoons.map { it.velocity[axis] }
+
+    var moons = initialMoons
+    var steps = BigDecimal(0)
+
+
+    while (true) {
         steps++
-        if(steps % BigDecimal(10000000) == BigDecimal(0)) {
+        if (steps % BigDecimal(10000000) == BigDecimal(0)) {
             println("$steps steps")
         }
-        for (moon in moons) {
-            moon.applyGravity(moons)
-        }
-        for (moon in moons) {
-            moon.move()
-        }
+        moons = moons.map { it.applyGravity(moons) }
 
-        var positions = moons.map{it.position}
-        var velocities = moons.map{it.velocity}
+        var positions = moons.map { it.position[axis] }
+        var velocities = moons.map { it.velocity[axis] }
 
-        if(positions == initialPositions && velocities == initialVelocities) {
-            break
-        }
+        if (positions == initialPositions && velocities == initialVelocities)
+            return steps
     }
-
-    println("Steps: $steps")
 }
+//fun part2(moons: List<Moon>) {
+//    var steps = BigDecimal(0)
+//    val initialPositions = moons.map{it.position}
+//    val initialVelocities = moons.map{it.velocity}
+//
+//    while(true) {
+//        steps++
+//        if(steps % BigDecimal(10000000) == BigDecimal(0)) {
+//            println("$steps steps")
+//        }
+//        for (moon in moons) {
+//            moon.applyGravity(moons)
+//        }
+//        for (moon in moons) {
+//            moon.move()
+//        }
+//
+//        var positions = moons.map{it.position}
+//        var velocities = moons.map{it.velocity}
+//
+//        if(positions == initialPositions && velocities == initialVelocities) {
+//            break
+//        }
+//    }
+//
+//    println("Steps: $steps")
+//}
 
-fun part1(moons: List<Moon>, steps: Int) {
-    for (step in 1..steps) {
-        for (moon in moons) {
-            moon.applyGravity(moons)
-        }
-        for (moon in moons) {
-            moon.move()
-        }
-    }
+fun part1(startingMoons: List<Moon>, steps: Int) {
+    var moons = startingMoons
+    for (step in 1..steps)
+        moons = moons.map{it.applyGravity(moons)}
 
     for(moon in moons) {
         println(moon)
@@ -67,7 +85,7 @@ fun test1() {
         Moon("Callisto", position=Vector(4, -8, 8)),
         Moon("Ganymede", position=Vector(3, 5, -1))
     )
-    part2(moons)
+    part1(moons, 10)
 }
 
 /**
@@ -83,7 +101,12 @@ fun puzzleInput() {
         Moon("Callisto", position=Vector(-4, -6, 7)),
         Moon("Ganymede", position=Vector(6, -9, -11))
     )
-    part2(moons)
+    val xPeriodicity = periodicity(0, moons)
+    val yPeriodicity = periodicity(1, moons)
+    val zPeriodicity = periodicity(2, moons)
+
+    println("$xPeriodicity $yPeriodicity $zPeriodicity")
+    //part2(moons)
 }
 
 fun main() {
