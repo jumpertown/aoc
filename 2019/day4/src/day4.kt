@@ -37,11 +37,12 @@ fun sortedContainsDouble(sorted: CharArray): Boolean {
 
     for(c in sorted) {
         if(c != prevChar) {
-            if(charCount == 2)
+            if(charCount == 2) {
                 break
-            else
+            } else {
                 prevChar = c
                 charCount = 1
+            }
         } else {
             charCount += 1
         }
