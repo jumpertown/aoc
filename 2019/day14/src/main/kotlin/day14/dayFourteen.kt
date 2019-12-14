@@ -1,15 +1,14 @@
 package day14
 
 import java.io.File
-import java.math.BigDecimal
 import java.math.BigInteger
 
 data class Chemical(val name: String)
 
 val ORE = Chemical("ORE")
 
-data class ChemicalQuantity(val chemical: Chemical, val quantity: Int) {
-    operator fun times(multiplier: Int): ChemicalQuantity =
+data class ChemicalQuantity(val chemical: Chemical, val quantity: BigInteger) {
+    operator fun times(multiplier: BigInteger): ChemicalQuantity =
             ChemicalQuantity(chemical, quantity * multiplier)
 
     companion object {
@@ -21,39 +20,29 @@ data class ChemicalQuantity(val chemical: Chemical, val quantity: Int) {
 
             return ChemicalQuantity(
                     Chemical(groups[2]!!.value),
-                    groups[1]!!.value.toInt()
+                    groups[1]!!.value.toBigInteger()
             )
         }
     }
 }
 
-data class ComplexReaction(val input: Set<ChemicalQuantity>, val output: Set<ChemicalQuantity>) {
-    fun toOre(): ComplexReaction {
-        return this
-    }
-}
-
 data class Reaction(val input: List<ChemicalQuantity>, val output: ChemicalQuantity) {
-    operator fun times(multiplier: Int): Reaction {
+    operator fun times(multiplier: BigInteger): Reaction {
         val newOutput = output * multiplier
         val newInput = input.map {it * multiplier}
         return Reaction(newInput, newOutput)
     }
 
     fun simplify(): Reaction {
-        val mix = mutableMapOf<Chemical, Int>()
+        val mix = mutableMapOf<Chemical, BigInteger>()
         for(chemicalQuantity in input) {
             var chemical = chemicalQuantity.chemical
-            var quantity = mix.getOrDefault(chemical, 0) + chemicalQuantity.quantity
+            var quantity = mix.getOrDefault(chemical, BigInteger.ZERO) + chemicalQuantity.quantity
             mix[chemical] = quantity
         }
 
         val simplifiedInput = mix.map{entry -> ChemicalQuantity(entry.key, entry.value)}
         return Reaction(simplifiedInput, this.output)
-    }
-
-    fun toOre(): Reaction {
-        return this
     }
 
     companion object {
@@ -66,8 +55,6 @@ data class Reaction(val input: List<ChemicalQuantity>, val output: ChemicalQuant
 
             val input = groups[1]!!.value
             val output = groups[2]!!.value
-            //val outputQuantity = groups[2]!!.value.toInt()
-            //val outputChemical = Chemical(groups[3]!!.value)
 
             return Reaction(
                     input.split(',').map{ ChemicalQuantity.fromString(it) },
@@ -75,29 +62,6 @@ data class Reaction(val input: List<ChemicalQuantity>, val output: ChemicalQuant
             )
         }
     }
-}
-
-fun reactionMap(reactions: List<Reaction>): Map<Chemical, MutableList<Reaction>> {
-    val recipes = mutableMapOf<Chemical, MutableList<Reaction>>()
-
-    for(reaction in reactions) {
-        val chemical = reaction.output.chemical
-
-        if(recipes.containsKey(chemical)) {
-            recipes[chemical]!!.add(reaction)
-        } else {
-            recipes[chemical] = mutableListOf(reaction)
-        }
-    }
-
-    return recipes.toMap()
-}
-
-fun waysOfMaking() {
-    val reactions = parsePuzzleInput()
-    val recipes = reactionMap(reactions)
-
-    println(recipes.values.map {it.size}.max())
 }
 
 /**
@@ -119,7 +83,7 @@ fun test1() {
     ).map {Reaction.fromString(it)}.map { it.output.chemical to it }.toMap()
 
     println(makeChemicalFromOre(
-            ChemicalQuantity(Chemical("FUEL"), 1),
+            ChemicalQuantity(Chemical("FUEL"), BigInteger.ONE),
             recipes
     ))
 }
@@ -129,37 +93,73 @@ fun part1() {
     val recipes = reactions.map { it.output.chemical to it }.toMap()
 
     println(makeChemicalFromOre(
-            ChemicalQuantity(Chemical("FUEL"), 1),
+            ChemicalQuantity(Chemical("FUEL"), BigInteger.ONE),
             recipes
     ))
 }
 
+fun part2() {
+    val reactions = parsePuzzleInput()
+    val recipes = reactions.map { it.output.chemical to it }.toMap()
+
+    // Binary Search
+    val totalOre = BigInteger("1000000000000")
+
+    var attempt = BigInteger("2048")
+    var tooLow = attempt
+    var tooHigh: BigInteger? = null
+
+    // Get bounds
+    while(true) {
+        var oreRequired = makeChemicalFromOre (
+                ChemicalQuantity(Chemical("FUEL"), attempt),
+                recipes
+        )
+
+        if(oreRequired > totalOre) {
+            tooHigh = attempt
+        } else if(oreRequired < totalOre) {
+            tooLow = attempt
+        } else {
+            println("Bang on $attempt")
+            break
+        }
+
+        if(tooHigh == null) {
+            attempt *= BigInteger.TWO
+        } else {
+            if(tooHigh - tooLow == BigInteger.ONE)
+                break
+
+            attempt = tooLow + (tooHigh - tooLow) / BigInteger.TWO
+        }
+    }
+
+    println("Too low $tooLow, too high $tooHigh")
+
+
+}
+
 fun main() {
-    part1()
+    part2()
     //val reactions = parsePuzzleInput()
 
     // See from the waysOfMaking test that there's only one way to make each chemical
     //val recipes = reactions.map{ it.output.chemical to it }.toMap()
 }
 
-fun lcm(a: Int, b: Int): Int {
-    val bigA = BigInteger.valueOf(a.toLong())
-    val bigB = BigInteger.valueOf(b.toLong())
-    return (bigA * (bigB / bigA.gcd(bigB))).toInt()
-}
-
-fun quantityMultiple(required: Int, canMake: Int): Int =
-    if (required % canMake == 0)
+fun quantityMultiple(required: BigInteger, canMake: BigInteger): BigInteger =
+    if (required % canMake == BigInteger.ZERO)
         required / canMake
     else
-        required / canMake + 1
+        (required / canMake) + BigInteger.ONE
 
 
 fun makeChemicalFromOre(
         chemicalQuantity: ChemicalQuantity,
         recipes: Map<Chemical, Reaction>
-): Int {
-    val store = mutableMapOf<Chemical, Int>()
+): BigInteger {
+    val store = mutableMapOf<Chemical, BigInteger>()
 
     tailrec fun _makeChemical(chemicalQuantity: ChemicalQuantity): List<ChemicalQuantity> {
         val chemical = chemicalQuantity.chemical
@@ -176,7 +176,7 @@ fun makeChemicalFromOre(
             quantity -= take
             store[chemical] = storeVal - take
 
-            if(quantity == 0) {
+            if(quantity == BigInteger.ZERO) {
                 return listOf<ChemicalQuantity>()
             }
         }
@@ -188,8 +188,8 @@ fun makeChemicalFromOre(
 
         //Put the excess back in the store
         val excess = recipe.output.quantity - quantity
-        if(excess != 0) {
-            store[chemical] = store.getOrDefault(chemical, 0) + excess
+        if(excess != BigInteger.ZERO) {
+            store[chemical] = store.getOrDefault(chemical, BigInteger.ZERO) + excess
         }
 
         return recipe.input.flatMap {_makeChemical(it)}

@@ -1,6 +1,7 @@
 import day14.Chemical
 import day14.ChemicalQuantity
 import day14.Reaction
+import java.math.BigInteger
 
 /*
 * 10 ORE => 10 A
@@ -12,13 +13,13 @@ import day14.Reaction
  */
 Reaction(
         input=listOf(
-                ChemicalQuantity(Chemical("ORE"), 14),
-                ChemicalQuantity(Chemical("B"), 6),
-                ChemicalQuantity(Chemical("ORE"), 10),
-                ChemicalQuantity(Chemical("A"), 9),
-                ChemicalQuantity(Chemical("B"), 34)
+                ChemicalQuantity(Chemical("ORE"), BigInteger("14")),
+                ChemicalQuantity(Chemical("B"), BigInteger("6")),
+                ChemicalQuantity(Chemical("ORE"), BigInteger("10")),
+                ChemicalQuantity(Chemical("A"), BigInteger("9")),
+                ChemicalQuantity(Chemical("B"), BigInteger("34"))
         ),
-        output=ChemicalQuantity(Chemical("BLAH"), 10)
+        output=ChemicalQuantity(Chemical("BLAH"), BigInteger("10"))
 ).simplify()
 
 Reaction.fromString("7 A, 1 B => 9 C")
