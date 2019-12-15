@@ -3,50 +3,47 @@ package intcode
 import java.math.BigDecimal
 import java.util.*
 
-class Computer(val inputCodes: List<BigDecimal>) {
-    init {
-        RelativeBase.value = 0
-    }
-    var isTerminated = false
-    var position = 0
-    var overriddenCodes = mutableMapOf<Int, BigDecimal>()
-
-    fun operate(inputs: List<BigDecimal>): List<BigDecimal> {
+data class Computer(
+        val programme: List<BigDecimal>,
+        val state: Map<Int, BigDecimal> = mapOf(),
+        val position: Int = 0,
+        val isTerminated: Boolean = false,
+        val relativeBase: Int = 0,
+        val outputs: List<BigDecimal> = listOf()
+) {
+    fun operate(inputs: List<BigDecimal>): Computer {
         val inputQueue = ArrayDeque<BigDecimal>(inputs)
+        var overriddenCodes = state.toMutableMap()
 
-        fun read(index: Int): BigDecimal {
-            val ret = if (overriddenCodes.containsKey(index)) {
+        fun read(index: Int): BigDecimal =
+            if (overriddenCodes.containsKey(index)) {
                 overriddenCodes[index]!!
-            } else if(index < 0 || index >= inputCodes.size) {
+            } else if(index < 0 || index >= programme.size) {
                 BigDecimal(0)
             } else {
-                inputCodes[index]
+                programme[index]
             }
-            //println("Reading index $index ($ret)")
-            return ret
-        }
 
         fun write(index: Int, value: BigDecimal) {
             //println("Writing $value to $index")
             overriddenCodes[index] = value
         }
 
-        fun run(): List<BigDecimal> {
-            val outputs = mutableListOf<BigDecimal>()
+        fun run(): Computer {
+            val operationOutputs = mutableListOf<BigDecimal>()
+            var operationTerminated = isTerminated
+            var operationPosition = position
 
             while (true) {
-                var opCode = read(position)
-                //println("Pos: $position OpCode: $opCode 0: ${read(0)}, 63: ${read(63)}")
+                var opCode = read(operationPosition)
                 var operator = Operator.create(opCode.toInt(), ::read, ::write)
 
                 if (operator.isTerminated) {
-                    //println("TERMINATING...")
-                    this.isTerminated = true
+                    operationTerminated = true
                     break
                 }
 
                 var numOperands = operator.numOperands
-
                 var operands = ((position + 1)..(position + numOperands)).map { read(it) }
 
                 if (operator.requiresInput) {
@@ -66,18 +63,23 @@ class Computer(val inputCodes: List<BigDecimal>) {
 
                 if (ret != null) {
                     if (operator.isJump) {
-                        //println("Jumping to $ret")
-                        position = ret.toInt()
+                        operationPosition = ret.toInt()
                         continue
                     }
-                    //println("Output: $ret")
-                    outputs.add(ret)
+                    operationOutputs.add(ret)
                 }
 
-                position += (numOperands + 1)
+                operationPosition += (numOperands + 1)
             }
 
-            return outputs.toList()
+            return Computer(
+                    programme = programme,
+                    state = overriddenCodes.toMap(),
+                    position = operationPosition,
+                    isTerminated = operationTerminated,
+                    relativeBase = relativeBase,
+                    outputs = operationOutputs.toList()
+            )
         }
 
         return run()
