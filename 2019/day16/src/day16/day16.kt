@@ -35,7 +35,7 @@ fun processRepeatedly(signal: List<Int>, repeat: Int): List<Int> {
 
 
 fun process(signal: List<Int>): List<Int> =
-    (1..signal.size).map{indexedDigitImproved(signal, it)}
+    (1..signal.size).map{indexedDigitAttemptTrois(signal, it)}
 
 
 fun indexedDigit(signal: List<Int>, outputDigit: Int): Int {
@@ -58,6 +58,20 @@ fun indexedDigitImproved(signal: List<Int>, outputDigit: Int): Int {
 
     return units(positiveContrib - negativeContrib)
 }
+
+fun indexedDigitAttemptTrois(signal: List<Int>, outputDigit: Int): Int =
+    signal.asSequence()
+        .drop(outputDigit - 1)
+        .chunked(outputDigit)
+        .chunked(4)
+        .map{
+            val positive = if(it.isNotEmpty()) it[0].sum() else 0
+            val negative = if(it.size >= 3) it[2].sum() else 0
+            positive - negative
+            //it.getOrElse(0){listOf()}.sum() - it.getOrElse(2){listOf()}.sum()
+        }
+        .map { units(it) }
+        .sum()
 
 fun getMultiplier(index: Int, repeat: Int): Int {
     val fullPatternLength = 4 * repeat
