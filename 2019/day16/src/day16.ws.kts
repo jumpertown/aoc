@@ -14,6 +14,7 @@ negativeRangeStarts(8, 1)
 
 
 process(intSignal)
+processAttemptVier(intSignal)
 
 
 var longerSignal = "80871224585914546619083218645595"
