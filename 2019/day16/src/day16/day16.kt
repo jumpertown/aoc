@@ -5,72 +5,122 @@ import java.util.*
 import kotlin.math.absoluteValue
 
 fun main() {
-    println(part2())
-}
-
-fun part2(): List<Int> {
     val puzzleInput = "59715091976660977847686180472178988274868874248912891927881770506416128667679122958792624406231072013221126623881489317912309763385182133601840446469164152094801911846572235367585363091944153574934709408511688568362508877043643569519630950836699246046286262479407806494008328068607275931633094949344281398150800187971317684501113191184838118850287189830872128812188237680673513745269645219228183633986701871488467284716433953663498444829748364402022393727938781357664034739772457855166471802886565257858813291667525635001823584650420815316132943869499800374997777130755842319153463895364409226260937941771665247483191282218355610246363741092810592458"
-    val intPuzzleInput = puzzleInput.map {it.toString().toInt()}
-    val megaPuzzleInput = repeatSignal(intPuzzleInput, 1000)
-    val output = processRepeatedly(megaPuzzleInput, 100)
+    println(part2AllInplace(puzzleInput))
+    //println(part2("03036732577212944063491565474664"))
+}
 
-    val offset = output.subList(0, 7)
+fun part2(inputSignal: String): List<Int> {
+    //val puzzleInput = "59715091976660977847686180472178988274868874248912891927881770506416128667679122958792624406231072013221126623881489317912309763385182133601840446469164152094801911846572235367585363091944153574934709408511688568362508877043643569519630950836699246046286262479407806494008328068607275931633094949344281398150800187971317684501113191184838118850287189830872128812188237680673513745269645219228183633986701871488467284716433953663498444829748364402022393727938781357664034739772457855166471802886565257858813291667525635001823584650420815316132943869499800374997777130755842319153463895364409226260937941771665247483191282218355610246363741092810592458"
+    val intPuzzleInput = inputSignal.map {it.toString().toInt()}
+    val offset = inputSignal.take(7).toInt()
+    val megaPuzzleInput = repeatSignal(intPuzzleInput, 10000).takeLast(inputSignal.length * 10000 - offset)
+    val output = processRepeatedly(megaPuzzleInput, 100, offset = offset)
 
-    return output.subList(0, 8)
+    return output.take(8)
+}
+
+fun part2AllInplace(inputSignal: String) {
+    //val puzzleInput = "59715091976660977847686180472178988274868874248912891927881770506416128667679122958792624406231072013221126623881489317912309763385182133601840446469164152094801911846572235367585363091944153574934709408511688568362508877043643569519630950836699246046286262479407806494008328068607275931633094949344281398150800187971317684501113191184838118850287189830872128812188237680673513745269645219228183633986701871488467284716433953663498444829748364402022393727938781357664034739772457855166471802886565257858813291667525635001823584650420815316132943869499800374997777130755842319153463895364409226260937941771665247483191282218355610246363741092810592458"
+    val intPuzzleInput = inputSignal.map {it.toString().toInt()}
+    val offset = inputSignal.take(7).toInt()
+    val megaPuzzleInput = repeatSignal(intPuzzleInput, 10000).takeLast(inputSignal.length * 10000 - offset)
+
+    val totals = megaPuzzleInput.toIntArray()
+
+    println("Iterating over the indices: ${totals.size}")
+    for(iter in 1..100) {
+        val sdf = SimpleDateFormat("dd/M/yyyy hh:mm:ss")
+        var currentDate = sdf.format(Date())
+        println("$currentDate: iteration $iter...")
+        for (i in totals.indices) {
+            if (i % 100000 == 0) {
+                println("Processing $i...")
+            }
+            for (j in 0 until i) {
+                totals[j] += getMultiplier(i + offset + 1, j + offset + 1) * totals[i]
+            }
+        }
+
+        println("Taking the units...")
+        for (i in totals.indices) {
+            totals[i] = units(totals[i])
+        }
+    }
+
+    println(totals.take(8))
 }
 
 
-fun processRepeatedly(signal: List<Int>, repeat: Int): List<Int> {
+fun processRepeatedly(signal: List<Int>, repeat: Int, offset: Int = 0): List<Int> {
     var processingSignal = signal
 
     for(i in 1..repeat) {
         val sdf = SimpleDateFormat("dd/M/yyyy hh:mm:ss")
         var currentDate = sdf.format(Date())
         println("$currentDate: iteration $i...")
-        processingSignal = processAttemptVier(processingSignal)
+        processingSignal = processAttemptVier(processingSignal, offset)
     }
 
     return processingSignal
 }
 
 
-fun process(signal: List<Int>): List<Int> =
-    (1..signal.size).map{indexedDigitAttemptTrois(signal, it)}
+fun process(signal: List<Int>, offset: Int = 0): List<Int> =
+    (1..signal.size).map{indexedDigit(signal, it, offset)}
 
-fun processAttemptVier(signal: List<Int>): List<Int> {
+fun processAttemptVier(signal: List<Int>, offset: Int = 0): List<Int> {
     val output = mutableListOf<Int>()
+    //val output = signal.take(5971508).toMutableList()
     for (i in 1..signal.size)
-        output.add(indexedDigitAttemptTrois(signal, i))
+        output.add(indexedDigitImproved(signal, i, offset))
 
     return output.toList()
 }
 
+fun processAttemptFunf(signal: List<Int>): List<Int> {
+    // Calculate all figures in one pass and sum in place
+    val totals = signal.toIntArray()
 
-fun indexedDigit(signal: List<Int>, outputDigit: Int): Int {
+    for (i in totals.indices) {
+        for (j in 0 until i) {
+            totals[j] += getMultiplier(i + 1, j + 1) * totals[i]
+        }
+    }
+
+    for (i in totals.indices) {
+        totals[i] = units(totals[i])
+    }
+
+    return totals.toList()
+}
+
+
+fun indexedDigit(signal: List<Int>, outputDigit: Int, offset:Int = 0): Int {
     val ret = signal
-        .mapIndexed { index, i ->  i * getMultiplier(index + 1, outputDigit) }
+        .mapIndexed { index, i ->  i * getMultiplier(index + offset + 1, outputDigit + offset) }
         .sum()
 
     return units(ret)
 }
 
-fun indexedDigitImproved(signal: List<Int>, outputDigit: Int): Int {
+fun indexedDigitImproved(signal: List<Int>, outputDigit: Int,  offset:Int = 0): Int {
     val len = signal.size
-    val positiveContrib = positiveRangeStarts(len, outputDigit)
-        .map {signal.subList(it, if(it + outputDigit > len) len else it + outputDigit).sum()}
+    val positiveContrib = positiveRangeStarts(len, outputDigit + offset)
+        .map {signal.subList(it, if(it + outputDigit + offset > len) len else it + outputDigit + offset).sum()}
         .sum()
 
-    val negativeContrib = negativeRangeStarts(len, outputDigit)
-        .map {signal.subList(it, if(it + outputDigit > len) len else it + outputDigit).sum()}
+    val negativeContrib = negativeRangeStarts(len, outputDigit + offset)
+        .map {signal.subList(it, if(it + outputDigit + offset > len) len else it + outputDigit + offset).sum()}
         .sum()
 
     return units(positiveContrib - negativeContrib)
 }
 
-fun indexedDigitAttemptTrois(signal: List<Int>, outputDigit: Int): Int =
+fun indexedDigitAttemptTrois(signal: List<Int>, outputDigit: Int, startingDigit: Int = 0): Int =
     signal.asSequence()
         .drop(outputDigit - 1)
-        .chunked(outputDigit)
+        .chunked(outputDigit + startingDigit)
         .chunked(4)
         .map{
             val positive = if(it.isNotEmpty()) it[0].sum() else 0
@@ -99,10 +149,10 @@ fun units(value: Int) =
 fun repeatSignal(signal: List<Int>, repeatTimes: Int): List<Int> =
     (1..repeatTimes).map{signal}.flatten()
 
-fun positiveRangeStarts(signalLen: Int, repeat: Int): List<Int> {
+fun positiveRangeStarts(signalLen: Int, repeat: Int, offset: Int = 0): List<Int> {
     val max = (signalLen - repeat) / (4 * repeat)
-    return (0..max).map {repeat - 1 + 4 * repeat * it}
+    return (0..max).map {repeat - 1 + 4 * repeat * it}.filter{it > offset}.map{it - offset}
 }
 
-fun negativeRangeStarts(signalLen: Int, repeat: Int): List<Int> =
+fun negativeRangeStarts(signalLen: Int, repeat: Int, offset: Int = 0): List<Int> =
     positiveRangeStarts(signalLen, repeat).map{it + 2 * repeat}.filter{it < signalLen}
