@@ -7,12 +7,30 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 
+data class GameSection(val position: Point, val topLeft: Point, val bottomRight: Point)
+
 data class GameState(val position: Point, val keysRequired: Set<Char>) {
     val solved: Boolean
         get() = keysRequired.isEmpty()
 }
 
-class PuzzleMap(val input: List<String>) {
+data class MultiplayGameState(val positions: List<Point>, val keysRequired: Set<Char>) {
+    val solved: Boolean
+        get() = keysRequired.isEmpty()
+
+    fun move(index: Int, direction: Direction, artifact: Char): MultiplayGameState {
+        val newPositions = positions.mapIndexed{ curIndex, it ->
+            if(index == curIndex)
+                it.move(direction)
+            else
+                it
+        }
+        return MultiplayGameState(newPositions, keysRequired.minus(artifact))
+    }
+}
+
+
+class PuzzleMap(val input: List<String>, val walls: List<Point> = listOf()) {
     val grid: Map<Point, Char>
     val initialPosition: Point
     val bottomRight: Point
@@ -33,11 +51,14 @@ class PuzzleMap(val input: List<String>) {
         for(row in input) {
             var x = 0
             for(artifact in row) {
-                if(artifact == '@') {
-                    me = Point(x, y)
-                    mutMap[Point(x, y)] = '.'
+                var point = Point(x, y)
+                if(point in walls) {
+                    mutMap[point] = '#'
+                } else if(artifact == '@') {
+                    me = point
+                    mutMap[point] = '.'
                 } else {
-                    mutMap[Point(x, y)] = artifact
+                    mutMap[point] = artifact
                 }
                 x++
             }
@@ -55,6 +76,23 @@ class PuzzleMap(val input: List<String>) {
                     requiredKey !in state.keysRequired
                 } else newPosition != '#'
             }.map {move(state, it)}
+
+    fun nextMultiplayStates(state: MultiplayGameState): List<MultiplayGameState> =
+        state.positions.indices.map { index ->
+            Direction.all.filter {direction ->
+                val newPosition = grid.getOrDefault(
+                        state.positions[index].move(direction),
+                        '#'
+                )
+                if(newPosition in 'A'..'Z') {
+                    val requiredKey = newPosition + 32
+                    requiredKey !in state.keysRequired
+                } else newPosition != '#'
+            }.map { direction ->
+                val newPosition = state.positions[index].move(direction)
+                state.move(index, direction, grid[newPosition]!!)
+            }
+        }.flatten()
 
     private fun move(state: GameState, direction: Direction): GameState {
         val newPosition = state.position.move(direction)
@@ -86,6 +124,9 @@ class PuzzleMap(val input: List<String>) {
     val keys: Set<Char>
         get() = grid.values.filter { it in 'a'..'z' }.toSet()
 
+    fun keysInArea(topLeft: Point, bottomRight: Point): Set<Char> =
+        grid.filter {it.value in 'a'..'z'}.filter {it.key.inArea(topLeft, bottomRight)}.map {it.value}.toSet()
+
     private fun getBottomRightHey(): Point {
         val maxX  = grid.keys.map {it.x}.max()
         val maxY  = grid.keys.map {it.y}.max()
@@ -95,13 +136,29 @@ class PuzzleMap(val input: List<String>) {
 }
 
 fun main() {
-    part1()
+    part2()
 }
 
 fun part1() {
     val puzzleMap = parsePuzzleInput()
     puzzleMap.drawMap()
     println(solver(puzzleMap))
+}
+
+fun part2() {
+    val startingPoint = Point(x=40, y=40)
+    val walls = Direction.all.map{startingPoint.move(it)}
+    val puzzleMap = parsePuzzleInput(walls)
+    //println(multiSolver(puzzleMap))
+    val topLeft = Point(40, 40)
+    val bottomRight = Point(80, 80)
+    val requiredKeys = puzzleMap.keysInArea(topLeft, bottomRight)
+
+    val gameSection = GameSection(Point(41, 41), topLeft, bottomRight)
+
+    println("Keys to collect: $requiredKeys")
+    println(solver(puzzleMap, gameSection))
+    println("Bottom right of complete map: ${puzzleMap.bottomRight}")
 }
 
 fun test1() {
@@ -133,11 +190,14 @@ fun test2() {
     println(solver(puzzleMap))
 }
 
-fun solver(puzzleMap: PuzzleMap): Int {
-    val initialState = GameState(puzzleMap.initialPosition, puzzleMap.keys)
+fun solver(puzzleMap: PuzzleMap, gameSection: GameSection? = null): Int {
+    val initialState = if(gameSection != null)
+        GameState(gameSection.position, puzzleMap.keysInArea(gameSection.topLeft, gameSection.bottomRight))
+    else
+        GameState(puzzleMap.initialPosition, puzzleMap.keys)
 
     var states = setOf(initialState)
-    var seenStates = states
+    val seenStates = states.toMutableSet()
 
     fun nextMove(states: Set<GameState>): Set<GameState> =
         states.map {puzzleMap.nextStates(it)}
@@ -149,6 +209,11 @@ fun solver(puzzleMap: PuzzleMap): Int {
     while(true) {
         steps++
         states = nextMove(states)
+
+        if(states.isEmpty()) {
+            println("Couldn't find solution")
+            break
+        }
         if(!states.none { it.solved })
             break
 
@@ -159,12 +224,51 @@ fun solver(puzzleMap: PuzzleMap): Int {
             println("$currentDate $steps steps. States: ${seenStates.size} Keys remaining: $minRemaining")
         }
 
-        seenStates = seenStates.union(states)
+        seenStates.addAll(states)
     }
     return steps
 }
 
-fun parsePuzzleInput(): PuzzleMap {
+fun multiSolver(puzzleMap: PuzzleMap): Int {
+    val initialPositions = listOf(
+            Pair(-1, -1),
+            Pair(1, 1),
+            Pair(1, -1),
+            Pair(-1, 1)
+    ).map {
+        Point(puzzleMap.initialPosition.x + it.first, puzzleMap.initialPosition.y + it.second)
+    }
+    val initialState = MultiplayGameState(initialPositions, puzzleMap.keys)
+
+    var states = setOf(initialState)
+    val seenStates = states.toMutableSet()
+
+    fun nextMove(states: Set<MultiplayGameState>): Set<MultiplayGameState> =
+            states.map {puzzleMap.nextMultiplayStates(it)}
+                    .flatten()
+                    .filter{it !in seenStates}
+                    .toSet()
+
+    var steps = 0
+    while(true) {
+        steps++
+        states = nextMove(states)
+        if(!states.none { it.solved })
+            break
+
+        if(steps % 20 == 0) {
+            val sdf = SimpleDateFormat("dd/M/yyyy hh:mm:ss")
+            var currentDate = sdf.format(Date())
+            var minRemaining = states.map {it.keysRequired.size }.min()
+            println("$currentDate $steps steps. States: ${seenStates.size} Keys remaining: $minRemaining")
+        }
+
+        seenStates.addAll(states)
+    }
+    return steps
+}
+
+fun parsePuzzleInput(walls: List<Point> = listOf()): PuzzleMap {
     val contents = File("/Users/justinpurrington/Downloads/day18.txt").readLines()
-    return PuzzleMap(contents)
+    return PuzzleMap(contents, walls)
 }

@@ -26,4 +26,5 @@ compileTestKotlin.kotlinOptions {
 
 application {
     mainClassName = "main.MainKt"
+    applicationDefaultJvmArgs = listOf("-Xms4096m", "-Xmx8192m")
 }
