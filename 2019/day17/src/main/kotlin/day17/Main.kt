@@ -35,7 +35,8 @@ fun part2() {
     val intCodes = parsePuzzleInput()
     val puzzleMap = PuzzleMap(intCodes.mapIndexed {index, it ->  if (index == 0) BigDecimal("2") else it})
 
-    puzzleMap.interact()
+    //puzzleMap.interact()
+    puzzleMap.inputInstructions()
 }
 
 enum class Artifact(val value: Char, val direction: Direction, val isTurtle: Boolean){
@@ -104,6 +105,10 @@ class PuzzleMap(val opCodes: List<BigDecimal>) {
 
     var turtlePosition: Point
     val instructions = mutableListOf<Instruction>()
+    val mainInstruction = "A,B,A,B,A,C,B,C,A,C"
+    val aInstruction = "L,6,R,12,L,6"
+    val bInstruction = "R,12,L,10,L,4,L,6"
+    val cInstruction = "L,10,L,10,L,4,L,6"
 
     init {
         intcodeMap = build()
@@ -143,6 +148,18 @@ class PuzzleMap(val opCodes: List<BigDecimal>) {
         }
     }
 
+    /** From interactive get this path:
+     *  A = L, 6, R, 12, L, 6
+     *  B = R, 12, L, 10, L, 4, L, 6
+     *  A = L, 6, R, 12, L, 6
+     *  B = R, 12, L, 10, L, 4, L, 6
+     *  A = L, 6, R, 12, L, 6
+     *  C = L, 10, L, 10, L, 4, L, 6
+     *  B = R, 12, L, 10, L, 4, L, 6
+     *  C = L, 10, L, 10, L, 4, L, 6
+     *  A = L, 6, R, 12, L, 6
+     *  C = L, 10, L, 10, L, 4, L, 6
+     */
     fun interact() {
         while(true) {
             drawMap()
@@ -158,6 +175,23 @@ class PuzzleMap(val opCodes: List<BigDecimal>) {
                 print(instructions)
                 break
             }
+        }
+    }
+
+    fun inputInstructions() {
+        val instructions = listOf(
+            mainInstruction,
+            aInstruction,
+            bInstruction,
+            cInstruction,
+            "n"
+        )
+
+        instructions.forEach {instuction ->
+            val input = instuction.map {it.toInt().toBigDecimal()} + listOf(BigDecimal(10))
+            val output = computer.operate(input)
+            println(output)
+            println(output.map{it.toInt().toChar()})
         }
     }
 
